@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>减脂助手 · Calorie Coach</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --ink:#1c2430; --muted:#7a8699;
+    --primary:#ff6b4a; --primary-soft:#ffece7; --green:#22b573; --blue:#3d7bff;
+    --line:#e8ecf2; --radius:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    padding-bottom:76px;}
+  header{position:sticky; top:0; z-index:10; background:linear-gradient(135deg,#ff8a5c,#ff5c3a);
+    color:#fff; padding:16px 18px 14px;}
+  header h1{margin:0; font-size:19px; font-weight:700;}
+  header .date{font-size:12px; opacity:.85; margin-top:2px;}
+  main{max-width:520px; margin:0 auto; padding:14px;}
+  .card{background:var(--card); border-radius:var(--radius); padding:16px;
+    margin-bottom:14px; box-shadow:0 1px 4px rgba(20,30,50,.06);}
+  .card h2{margin:0 0 10px; font-size:15px;}
+  .muted{color:var(--muted); font-size:12px;}
+  /* 大圆环 */
+  .ring-wrap{display:flex; align-items:center; gap:16px;}
+  .ring{width:120px; height:120px; flex:none;}
+  .ring text{font-weight:700;}
+  .nums{flex:1;}
+  .nums .big{font-size:30px; font-weight:800; line-height:1.1;}
+  .nums .big small{font-size:13px; font-weight:500; color:var(--muted);}
+  .nums .row{display:flex; justify-content:space-between; font-size:13px; margin-top:6px; color:var(--muted);}
+  .nums .row b{color:var(--ink);}
+  /* 宏量条 */
+  .macro{margin-top:12px;}
+  .macro .bar{height:10px; border-radius:6px; background:var(--line); overflow:hidden; margin-top:4px;}
+  .macro .bar i{display:block; height:100%; border-radius:6px;}
+  .macro .lbl{display:flex; justify-content:space-between; font-size:12px; color:var(--muted);}
+  .macro .lbl b{color:var(--ink);}
+  /* 表单 */
+  label{display:block; font-size:12px; color:var(--muted); margin:10px 0 4px;}
+  input,select,textarea{width:100%; padding:10px 12px; border:1px solid var(--line);
+    border-radius:10px; font-size:15px; background:#fafbfc; color:var(--ink);}
+  input:focus,select:focus,textarea:focus{outline:none; border-color:var(--primary);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  button{border:none; border-radius:12px; padding:12px 16px; font-size:15px; font-weight:600;
+    cursor:pointer; width:100%; background:var(--primary); color:#fff; margin-top:14px;}
+  button.sec{background:#eef1f6; color:var(--ink);}
+  button.small{width:auto; padding:6px 12px; font-size:13px; margin-top:0;}
+  button:disabled{opacity:.5;}
+  /* 餐次tab */
+  .seg{display:flex; background:#eef1f6; border-radius:12px; padding:4px; gap:4px; margin-bottom:12px;}
+  .seg span{flex:1; text-align:center; padding:8px 0; border-radius:9px; font-size:13px;
+    color:var(--muted); cursor:pointer;}
+  .seg span.on{background:#fff; color:var(--primary); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  /* 拍照区 */
+  .photo-box{border:2px dashed #d6dce6; border-radius:14px; padding:18px; text-align:center;
+    color:var(--muted); font-size:13px; cursor:pointer;}
+  .photo-box img{max-width:100%; border-radius:10px; display:block; margin:0 auto;}
+  #aiResult{display:none; margin-top:12px;}
+  #aiResult .kcal{font-size:34px; font-weight:800; color:var(--primary);}
+  .aiErr{background:#fff4f0; color:#d4380d; border-radius:10px; padding:10px; font-size:13px; margin-top:10px;}
+  /* 列表 */
+  .item{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .item:last-child{border-bottom:none;}
+  .item img{width:46px; height:46px; object-fit:cover; border-radius:10px; flex:none;}
+  .item .ico{width:46px; height:46px; border-radius:10px; background:#eef4ff; display:flex;
+    align-items:center; justify-content:center; font-size:22px; flex:none;}
+  .item .info{flex:1; min-width:0;}
+  .item .info .t{font-size:14px; font-weight:600;}
+  .item .info .s{font-size:12px; color:var(--muted); margin-top:2px;}
+  .item .k{font-weight:700; font-size:15px;}
+  .item .del{color:#c0c8d4; font-size:16px; padding:4px 6px; cursor:pointer;}
+  /* 底部导航 */
+  nav{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    display:flex; z-index:20;}
+  nav span{flex:1; text-align:center; padding:9px 0 12px; font-size:11px; color:var(--muted); cursor:pointer;}
+  nav span i{display:block; font-size:20px; font-style:normal; margin-bottom:2px;}
+  nav span.on{color:var(--primary); font-weight:700;}
+  .page{display:none;}
+  .page.on{display:block;}
+  .tip{background:var(--primary-soft); color:#c2451f; border-radius:10px; padding:10px 12px;
+    font-size:12px; line-height:1.6; margin-bottom:12px;}
+  .ok{color:var(--green); font-weight:700;}
+  .warn{color:#e67300; font-weight:700;}
+  h3.sub{font-size:13px; color:var(--muted); margin:16px 0 6px; font-weight:600;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔥 减脂助手</h1>
+  <div class="date" id="todayStr"></div>
+</header>
+
+<main>
+  <!-- ================= 今日 ================= -->
+  <section class="page on" id="page-home">
+    <div id="planTip"></div>
+    <div class="card">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#eef1f6" stroke-width="12"/>
+          <circle id="ringArc" cx="60" cy="60" r="50" fill="none" stroke="#ff6b4a" stroke-width="12"
+            stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314"
+            transform="rotate(-90 60 60)"/>
+          <text id="ringPct" x="60" y="58" text-anchor="middle" font-size="22" fill="#1c2430">0%</text>
+          <text x="60" y="76" text-anchor="middle" font-size="10" fill="#7a8699">已摄入</text>
+        </svg>
+        <div class="nums">
+          <div class="big" id="remainKcal">-- <small>kcal 剩余</small></div>
+          <div class="row"><span>目标摄入</span><b id="goalKcal">--</b></div>
+          <div class="row"><span>已摄入</span><b id="eatenKcal">0</b></div>
+          <div class="row"><span>运动消耗</span><b id="burnKcal" style="color:var(--green)">0</b></div>
+        </div>
+      </div>
+      <div class="macro">
+        <div class="lbl"><span>蛋白质 <b id="pNow">0</b>/<span id="pGoal">--</span> g</span><span id="pPct"></span></div>
+        <div class="bar"><i id="pBar" style="background:var(--blue); width:0%"></i></div>
+      </div>
+      <div class="macro">
+        <div class="lbl"><span>脂肪 <b id="fNow">0</b>/<span id="fGoal">--</span> g</span><span id="fPct"></span></div>
+        <div class="bar"><i id="fBar" style="background:#ffb020; width:0%"></i></div>
+      </div>
+      <div class="macro">
+        <div class="lbl"><span>碳水 <b id="cNow">0</b>/<span id="cGoal">--</span> g</span><span id="cPct"></span></div>
+        <div class="bar"><i id="cBar" style="background:var(--green); width:0%"></i></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🍽️ 今天的餐食</h2>
+      <div id="mealList"></div>
+      <div id="emptyMeals" class="muted" style="text-align:center; padding:14px 0;">
+        还没有记录，去「记一餐」拍张照片吧
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🏃 今天的运动</h2>
+      <div id="exList"></div>
+      <div id="emptyEx" class="muted" style="text-align:center; padding:14px 0;">
+        还没有运动记录，去「运动」页上传
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 记一餐 ================= -->
+  <section class="page" id="page-meal">
+    <div class="card">
+      <h2>📷 餐前拍照识别</h2>
+      <div class="tip">拍摄整餐食物（尽量俯拍、光线充足）。AI 会自动估算热量与蛋白质/脂肪/碳水，识别后可手动修正。</div>
+      <div class="seg" id="mealSeg">
+        <span data-v="早餐" class="on">🌅 早餐</span>
+        <span data-v="午餐">☀️ 午餐</span>
+        <span data-v="晚餐">🌙 晚餐</span>
+        <span data-v="加餐">🍎 加餐</span>
+      </div>
+      <div class="photo-box" id="photoBox">
+        <div id="photoHint">点击拍照 / 选择图片<br><span style="font-size:11px">🤖 需在「设置」中配置 AI Key</span></div>
+        <img id="photoPreview" style="display:none">
+      </div>
+      <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+      <button id="aiBtn" disabled>🤖 AI 识别热量</button>
+      <div id="aiErr" class="aiErr" style="display:none"></div>
+
+      <div id="aiResult">
+        <div style="text-align:center; margin:6px 0;">
+          <div class="kcal"><span id="rKcal">0</span> <small style="font-size:13px;color:var(--muted)">kcal</small></div>
+          <div class="muted" id="rName"></div>
+        </div>
+        <div class="grid3">
+          <div><label>蛋白质 g</label><input type="number" id="rP" step="0.1"></div>
+          <div><label>脂肪 g</label><input type="number" id="rF" step="0.1"></div>
+          <div><label>碳水 g</label><input type="number" id="rC" step="0.1"></div>
+        </div>
+        <label>热量 kcal（可修正）</label>
+        <input type="number" id="rK" step="1">
+        <button id="saveMealBtn">✅ 保存这餐</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>✍️ 手动录入（无 AI 时）</h2>
+      <div class="grid2">
+        <div><label>食物名称</label><input id="mName" placeholder="如：鸡胸肉沙拉"></div>
+        <div><label>热量 kcal</label><input id="mKcal" type="number" placeholder="400"></div>
+      </div>
+      <button class="sec" id="manualBtn">保存手动记录</button>
+    </div>
+  </section>
+
+  <!-- ================= 运动 ================= -->
+  <section class="page" id="page-ex">
+    <div class="card">
+      <h2>🏃 上传运动记录</h2>
+      <div class="tip">把跑步/走路 App（Keep、小米运动、华为运动健康等）的数据填进来，按体重自动计算消耗；也可以截图让 AI 读取。<br>
+        💡 <b>日常步数</b>：记录今天走过的总步数（约每 100 步消耗 3~4 kcal）。注意你的日常活动量系数里已包含一部分日常走动，若在「久坐」档位则步数消耗基本全是额外消耗。</div>
+      <div class="photo-box" id="exPhotoBox">
+        <div id="exPhotoHint">📷 可选：上传运动 App 截图，AI 自动读取数据</div>
+        <img id="exPhotoPreview" style="display:none">
+      </div>
+      <input type="file" id="exFileInput" accept="image/*" style="display:none">
+      <div class="grid3">
+        <div><label>类型</label>
+          <select id="exType">
+            <option value="run">🏃 跑步</option>
+            <option value="walk">🚶 快走</option>
+            <option value="steps">👣 日常步数</option>
+          </select>
+        </div>
+        <div><label>距离 km</label><input id="exDist" type="number" step="0.01" placeholder="5.0"></div>
+        <div><label>时长 分钟</label><input id="exDur" type="number" step="1" placeholder="30"></div>
+      </div>
+      <div class="grid3">
+        <div><label>步数（日常步数时填）</label><input id="exSteps" type="number" step="1" placeholder="如 8000"></div>
+        <div style="grid-column: span 2;"><label>消耗 kcal（留空则按体重自动计算）</label><input id="exKcal" type="number" step="1" placeholder="自动计算"></div>
+      </div>
+      <button id="saveExBtn">✅ 保存运动记录</button>
+    </div>
+  </section>
+
+  <!-- ================= 历史 ================= -->
+  <section class="page" id="page-hist">
+    <div class="card">
+      <h2>📈 近 7 天记录</h2>
+      <div id="histList"></div>
+    </div>
+  </section>
+
+  <!-- ================= 设置 ================= -->
+  <section class="page" id="page-set">
+    <div class="card">
+      <h2>👤 我的信息</h2>
+      <div class="grid3">
+        <div><label>身高 cm</label><input id="sHeight" type="number" placeholder="170"></div>
+        <div><label>体重 kg</label><input id="sWeight" type="number" step="0.1" placeholder="65"></div>
+        <div><label>年龄</label><input id="sAge" type="number" placeholder="25"></div>
+      </div>
+      <div class="grid2">
+        <div><label>性别</label>
+          <select id="sGender"><option value="m">男</option><option value="f">女</option></select>
+        </div>
+        <div><label>日常活动量</label>
+          <select id="sAct">
+            <option value="1.2">久坐（办公/开车）</option>
+            <option value="1.375">轻度（每周运动1-3次）</option>
+            <option value="1.55">中度（每周运动3-5次）</option>
+            <option value="1.725">高强度（几乎每天运动）</option>
+          </select>
+        </div>
+      </div>
+      <div><label>减脂激进度</label>
+        <select id="sAggr">
+          <option value="0.15">稳健（缺口15%，约每周0.5kg）</option>
+          <option value="0.22" selected>快速（缺口22%，约每周0.7kg）</option>
+          <option value="0.3">极速（缺口30%，需谨慎）</option>
+        </select>
+      </div>
+      <button id="saveProfileBtn">保存并计算我的方案</button>
+      <div id="planBox" style="display:none; margin-top:14px; background:#fff7f5; border-radius:12px; padding:12px; font-size:13px; line-height:1.9;"></div>
+    </div>
+
+    <div class="card">
+      <h2>🤖 AI 设置（拍照识别）</h2>
+      <div class="tip">默认使用智谱 <b>GLM-4V-Flash</b>（目前免费）。到 open.bigmodel.cn 注册后创建 API Key 填入即可。也兼容任何 OpenAI 格式的视觉接口。</div>
+      <label>接口地址 Base URL</label>
+      <input id="sApiBase" placeholder="https://open.bigmodel.cn/api/paas/v4">
+      <label>模型名称</label>
+      <input id="sModel" placeholder="glm-4v-flash">
+      <label>API Key</label>
+      <input id="sKey" type="password" placeholder="粘贴你的 Key（仅保存在本机浏览器）">
+      <button id="saveApiBtn">保存 AI 设置</button>
+      <div id="apiState" class="muted" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ 安全提示</h2>
+      <div class="muted" style="line-height:1.8; font-size:12px;">
+        每日摄入不建议长期低于 1200 kcal（女）/ 1500 kcal（男）。本工具的估算仅供参考，不能替代医生或营养师的建议。如有基础疾病请先咨询专业人士。
+      </div>
+      <button class="sec" id="clearBtn" style="color:#d4380d;">🗑️ 清空全部数据</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <span data-p="home" class="on"><i>🏠</i>今日</span>
+  <span data-p="meal"><i>📷</i>记一餐</span>
+  <span data-p="ex"><i>🏃</i>运动</span>
+  <span data-p="hist"><i>📊</i>历史</span>
+  <span data-p="set"><i>⚙️</i>设置</span>
+</nav>
+
+<script>
+/* ================= 数据存储 ================= */
+const KEY='calorieCoach.v1';
+let DB = load();
+function load(){ try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}} }
+function save(){ localStorage.setItem(KEY, JSON.stringify(DB)); }
+function todayKey(d=new Date()){
+  const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function day(k){ if(!DB.days) DB.days={}; if(!DB.days[k]) DB.days[k]={meals:[],exercises:[]}; return DB.days[k]; }
+function today(){ return day(todayKey()); }
+
+/* ================= 营养计算 ================= */
+function plan(){
+  const p=DB.profile; if(!p) return null;
+  const bmr = p.gender==='m'
+    ? 10*p.weight+6.25*p.height-5*p.age+5
+    : 10*p.weight+6.25*p.height-5*p.age-161;
+  const tdee = bmr*p.act;
+  const floor = p.gender==='m'?1500:1200;
+  let goal = Math.round(tdee*(1-p.aggr)/10)*10;
+  goal = Math.max(goal, floor);
+  const protein = Math.round(p.weight*1.6);           // 减脂期保肌肉：1.6g/kg
+  const fatG    = Math.round(goal*0.25/9);            // 25% 供能
+  const carbG   = Math.round((goal-protein*4-fatG*9)/4);
+  return {bmr:Math.round(bmr), tdee:Math.round(tdee), goal, protein, fatG, carbG, floor};
+}
+function sumMeals(meals){
+  return meals.reduce((a,m)=>({kcal:a.kcal+ (+m.kcal||0), p:a.p+(+m.protein||0),
+    f:a.f+(+m.fat||0), c:a.c+(+m.carbs||0)}),{kcal:0,p:0,f:0,c:0});
+}
+function sumEx(es){ return es.reduce((a,e)=>a+(+e.kcal||0),0); }
+
+/* 运动消耗：每公里每公斤体重 能量系数（含净运动成本） */
+function exKcal(type,dist,dur,steps){
+  const w=DB.profile?DB.profile.weight:65;
+  if(type==='steps') return Math.round(steps*w*0.0004); // 约0.55 kcal/kg/km ÷ 1400步/km
+  const perKm = type==='run'?1.036:0.55;
+  let kcal = dist ? dist*w*perKm : 0;
+  if(dur && dist){ // 结合时长用 MET 校正（防速度异常）
+    const kmh = dist/(dur/60);
+    let met = type==='run' ? Math.min(1.0*kmh+1.5, 19) : Math.max(2.5, Math.min(kmh*1.6, 8));
+    const byMet = met*w*(dur/60);
+    kcal = Math.max(kcal, byMet*0.85);
+  }
+  return Math.round(kcal);
+}
+
+/* ================= 页面切换 ================= */
+const pages=['home','meal','ex','hist','set'];
+document.querySelectorAll('nav span').forEach(el=>{
+  el.onclick=()=>{
+    document.querySelectorAll('nav span').forEach(s=>s.classList.remove('on'));
+    el.classList.add('on');
+    pages.forEach(p=>document.getElementById('page-'+p).classList.toggle('on', p===el.dataset.p));
+    if(el.dataset.p==='hist') renderHist();
+    if(el.dataset.p==='set') renderSettings();
+  };
+});
+
+/* ================= 今日渲染 ================= */
+function renderHome(){
+  const pl=plan();
+  document.getElementById('todayStr').textContent =
+    new Date().toLocaleDateString('zh-CN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  if(!pl){
+    document.getElementById('planTip').innerHTML =
+      `<div class="card"><h2>👋 欢迎！</h2><div class="muted" style="line-height:1.8">
+        先到「设置」填写身高、体重、年龄，我会为你计算快速减脂的每日摄入目标。</div>
+        <button onclick="go('set')">去填写 →</button></div>`;
+    document.getElementById('goalKcal').textContent='--';
+    return;
+  }
+  document.getElementById('planTip').innerHTML =
+    `<div class="tip">🎯 今日目标 <b>${pl.goal} kcal</b>（基础代谢 ${pl.bmr}，总消耗约 ${pl.tdee}）。</div>`;
+
+  const t=today(), s=sumMeals(t.meals), burn=sumEx(t.exercises);
+  const pct = Math.min(100, Math.round(s.kcal/pl.goal*100));
+  document.getElementById('ringArc').style.strokeDashoffset = 314*(1-pct/100);
+  document.getElementById('ringArc').style.stroke = s.kcal>pl.goal ? '#e02020' : '#ff6b4a';
+  document.getElementById('ringPct').textContent = pct+'%';
+  const remain = pl.goal - s.kcal + burn;
+  const rEl=document.getElementById('remainKcal');
+  rEl.innerHTML = `${remain} <small>kcal ${remain>=0?'剩余':'已超'}</small>`;
+  rEl.style.color = remain>=0 ? 'var(--ink)' : '#e02020';
+  document.getElementById('goalKcal').textContent = pl.goal;
+  document.getElementById('eatenKcal').textContent = Math.round(s.kcal);
+  document.getElementById('burnKcal').textContent = '+'+Math.round(burn);
+
+  const macros=[['p','pGoal',pl.protein,'#3d7bff'],['f','fGoal',pl.fatG,'#ffb020'],['c','cGoal',pl.carbG,'#22b573']];
+  macros.forEach(([k,g,val,color])=>{
+    const now=Math.round(s[k==='p'?'p':k==='f'?'f':'c']);
+    document.getElementById(k+'Now').textContent=now;
+    document.getElementById(g).textContent=val;
+    const p2=Math.min(100,Math.round(now/val*100));
+    document.getElementById(k+'Bar').style.width=p2+'%';
+    document.getElementById(k+'Pct').textContent=p2+'%';
+    document.getElementById(k+'Bar').style.background = now>val*1.15 ? '#e02020' : color;
+  });
+
+  document.getElementById('emptyMeals').style.display=t.meals.length?'none':'block';
+  document.getElementById('mealList').innerHTML=t.meals.map((m,i)=>`
+    <div class="item">
+      ${m.photo?`<img src="${m.photo}">`:'<div class="ico">🍽️</div>'}
+      <div class="info"><div class="t">${m.name||m.type}</div>
+        <div class="s">${m.type} · ${m.time} · P${Math.round(m.protein||0)}/F${Math.round(m.fat||0)}/C${Math.round(m.carbs||0)}g</div></div>
+      <div class="k">${Math.round(m.kcal)}</div>
+      <div class="del" onclick="delMeal(${i})">✕</div>
+    </div>`).join('');
+
+  document.getElementById('emptyEx').style.display=t.exercises.length?'none':'block';
+  document.getElementById('exList').innerHTML=t.exercises.map((e,i)=>{
+    const title = e.type==='steps' ? `日常步数 ${e.steps||'?'} 步`
+      : `${e.type==='run'?'跑步':'快走'} ${e.dist||'?'} km`;
+    return `<div class="item">
+      <div class="ico">${e.type==='run'?'🏃':(e.type==='walk'?'🚶':'👣')}</div>
+      <div class="info"><div class="t">${title}</div>
+        <div class="s">${e.time}${e.dur?' · '+e.dur+' 分钟':''}${e.note?' · '+e.note:''}</div></div>
+      <div class="k" style="color:var(--green)">+${Math.round(e.kcal)}</div>
+      <div class="del" onclick="delEx(${i})">✕</div>
+    </div>`;}).join('');
+}
+function go(p){ document.querySelector(`nav span[data-p="${p}"]`).click(); }
+function delMeal(i){ today().meals.splice(i,1); save(); renderHome(); }
+function delEx(i){ today().exercises.splice(i,1); save(); renderHome(); }
+
+/* ================= 记一餐 ================= */
+let mealType='早餐', photoData=null;
+document.querySelectorAll('#mealSeg span').forEach(s=>s.onclick=()=>{
+  document.querySelectorAll('#mealSeg span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); mealType=s.dataset.v;
+});
+document.getElementById('photoBox').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange=e=>handlePhoto(e.target.files[0]);
+document.getElementById('aiBtn').onclick=aiRecognize;
+
+function handlePhoto(file){
+  if(!file) return;
+  compress(file, 720, 0.75, data=>{
+    photoData=data;
+    const img=document.getElementById('photoPreview');
+    img.src=data; img.style.display='block';
+    document.getElementById('photoHint').style.display='none';
+    document.getElementById('aiBtn').disabled=false;
+  });
+}
+function compress(file, maxW, q, cb){
+  const r=new FileReader();
+  r.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const sc=Math.min(1, maxW/img.width);
+      const cv=document.createElement('canvas');
+      cv.width=img.width*sc; cv.height=img.height*sc;
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      cb(cv.toDataURL('image/jpeg',q));
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+async function callVision(prompt, dataURL){
+  const api=DB.api||{};
+  const base=(api.base||'https://open.bigmodel.cn/api/paas/v4').replace(/\/+$/,'');
+  const model=api.model||'glm-4v-flash';
+  if(!api.key) throw new Error('请先到「设置」填写 AI API Key');
+  const res=await fetch(base+'/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},
+    body:JSON.stringify({
+      model,
+      messages:[{role:'user',content:[
+        {type:'text',text:prompt},
+        {type:'image_url',image_url:{url:dataURL}}
+      ]}]
+    })
+  });
+  if(!res.ok){
+    const t=await res.text().catch(()=>'');
+    throw new Error('接口返回 '+res.status+'：'+t.slice(0,200));
+  }
+  const j=await res.json();
+  const text=j.choices?.[0]?.message?.content||'';
+  const m=text.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('AI 未返回有效数据：'+text.slice(0,120));
+  return JSON.parse(m[0]);
+}
+
+async function aiRecognize(){
+  const btn=document.getElementById('aiBtn'), err=document.getElementById('aiErr');
+  err.style.display='none';
+  btn.disabled=true; btn.textContent='🤖 识别中…';
+  try{
+    const r=await callVision(
+      '你是营养师。识别图中所有食物，估算这一餐总热量。只返回JSON：'+
+      '{"name":"菜品简述(15字内)","kcal":整数,"protein":克,"fat":克,"carbs":克}', photoData);
+    document.getElementById('rName').textContent=r.name||'';
+    document.getElementById('rKcal').textContent=Math.round(r.kcal||0);
+    document.getElementById('rK').value=Math.round(r.kcal||0);
+    document.getElementById('rP').value=Math.round((r.protein||0)*10)/10;
+    document.getElementById('rF').value=Math.round((r.fat||0)*10)/10;
+    document.getElementById('rC').value=Math.round((r.carbs||0)*10)/10;
+    document.getElementById('aiResult').style.display='block';
+  }catch(e){
+    err.textContent='❌ '+e.message+'（也可以在下方手动录入）';
+    err.style.display='block';
+  }
+  btn.disabled=false; btn.textContent='🤖 AI 识别热量';
+}
+
+document.getElementById('saveMealBtn').onclick=()=>{
+  const m={type:mealType, name:document.getElementById('rName').textContent,
+    kcal:+document.getElementById('rK').value||0,
+    protein:+document.getElementById('rP').value||0,
+    fat:+document.getElementById('rF').value||0,
+    carbs:+document.getElementById('rC').value||0,
+    photo:photoData, time:new Date().toTimeString().slice(0,5)};
+  today().meals.push(m); save();
+  resetMeal(); go('home'); renderHome();
+};
+function resetMeal(){
+  photoData=null;
+  document.getElementById('photoPreview').style.display='none';
+  document.getElementById('photoHint').style.display='block';
+  document.getElementById('aiResult').style.display='none';
+  document.getElementById('aiBtn').disabled=true;
+  document.getElementById('fileInput').value='';
+}
+document.getElementById('manualBtn').onclick=()=>{
+  const kcal=+document.getElementById('mKcal').value;
+  if(!kcal){alert('请填写热量');return;}
+  today().meals.push({type:mealType, name:document.getElementById('mName').value||'手动记录',
+    kcal, protein:0, fat:0, carbs:0, photo:null, time:new Date().toTimeString().slice(0,5)});
+  save(); document.getElementById('mName').value=''; document.getElementById('mKcal').value='';
+  go('home'); renderHome();
+};
+
+/* ================= 运动 ================= */
+document.getElementById('exPhotoBox').onclick=()=>document.getElementById('exFileInput').click();
+document.getElementById('exFileInput').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  compress(f,720,0.75,data=>{
+    document.getElementById('exPhotoPreview').src=data;
+    document.getElementById('exPhotoPreview').style.display='block';
+    document.getElementById('exPhotoHint').style.display='none';
+    const btn=document.createElement('button');
+    btn.textContent='🤖 AI 读取截图数据'; btn.className='small';
+    btn.onclick=async()=>{
+      btn.disabled=true; btn.textContent='识别中…';
+      try{
+        const r=await callVision('读取运动App截图中的本次运动数据。只返回JSON：'+
+          '{"type":"run、walk或steps","dist":公里数,"dur":分钟,"steps":步数,"kcal":千卡(没有就0)}', data);
+        if(r.type) document.getElementById('exType').value=['run','walk','steps'].includes(r.type)?r.type:'run';
+        if(r.dist) document.getElementById('exDist').value=r.dist;
+        if(r.dur)  document.getElementById('exDur').value=r.dur;
+        if(r.steps)document.getElementById('exSteps').value=r.steps;
+        if(r.kcal) document.getElementById('exKcal').value=r.kcal;
+      }catch(e2){ alert('❌ '+e2.message); }
+      btn.disabled=false; btn.textContent='🤖 AI 读取截图数据';
+    };
+    btn.style.marginTop='10px';
+    const box=document.getElementById('exPhotoBox');
+    const old=box.querySelector('button'); if(old)old.remove();
+    box.appendChild(btn);
+  });
+};
+document.getElementById('saveExBtn').onclick=()=>{
+  const dist=+document.getElementById('exDist').value||0;
+  const dur=+document.getElementById('exDur').value||0;
+  const steps=+document.getElementById('exSteps').value||0;
+  const type=document.getElementById('exType').value;
+  let kcal=+document.getElementById('exKcal').value||0;
+  if(type==='steps'){
+    if(!steps){alert('请填写步数');return;}
+  }else if(!dist && !dur){alert('请至少填写距离或时长');return;}
+  if(!kcal) kcal=exKcal(type, dist, dur, steps);
+  today().exercises.push({type, dist, dur, steps, kcal, note:'', time:new Date().toTimeString().slice(0,5)});
+  save();
+  document.getElementById('exDist').value=''; document.getElementById('exDur').value='';
+  document.getElementById('exSteps').value='';
+  document.getElementById('exKcal').value='';
+  document.getElementById('exPhotoPreview').style.display='none';
+  document.getElementById('exPhotoHint').style.display='block';
+  const b=document.querySelector('#exPhotoBox button'); if(b)b.remove();
+  go('home'); renderHome();
+};
+
+/* ================= 历史 ================= */
+function renderHist(){
+  const pl=plan();
+  const keys=Object.keys(DB.days).sort().reverse().slice(0,7);
+  document.getElementById('histList').innerHTML = keys.length? keys.map(k=>{
+    const d=DB.days[k], s=sumMeals(d.meals), b=sumEx(d.exercises);
+    const net=s.kcal-b, delta=pl? net-pl.goal : 0;
+    const diff = pl? (delta<=0?`<span class="ok">达标，缺口 ${Math.round(-delta)} kcal</span>`
+                             :`<span class="warn">超出目标 ${Math.round(delta)} kcal</span>`) : '';
+    return `<div class="item">
+      <div class="ico">📅</div>
+      <div class="info"><div class="t">${k}</div>
+        <div class="s">摄入 ${Math.round(s.kcal)} · 运动 -${Math.round(b)} · 净 ${Math.round(net)} kcal
+        · P${Math.round(s.p)}/F${Math.round(s.f)}/C${Math.round(s.c)}g</div></div>
+      <div style="font-size:12px; text-align:right;">${diff||Math.round(s.kcal)+' kcal'}</div>
+    </div>`;
+  }).join('') : '<div class="muted" style="text-align:center;padding:14px 0;">暂无历史记录</div>';
+}
+
+/* ================= 设置 ================= */
+function renderSettings(){
+  const p=DB.profile||{};
+  document.getElementById('sHeight').value=p.height||'';
+  document.getElementById('sWeight').value=p.weight||'';
+  document.getElementById('sAge').value=p.age||'';
+  document.getElementById('sGender').value=p.gender||'m';
+  document.getElementById('sAct').value=p.act||'1.375';
+  document.getElementById('sAggr').value=p.aggr||'0.22';
+  const a=DB.api||{};
+  document.getElementById('sApiBase').value=a.base||'https://open.bigmodel.cn/api/paas/v4';
+  document.getElementById('sModel').value=a.model||'glm-4v-flash';
+  document.getElementById('sKey').value=a.key||'';
+  document.getElementById('apiState').textContent = a.key
+    ? '✅ 已配置，可以开始拍照识别了' : '⚠️ 尚未配置 Key，拍照识别不可用（可手动录入）';
+}
+document.getElementById('saveProfileBtn').onclick=()=>{
+  const h=+document.getElementById('sHeight').value, w=+document.getElementById('sWeight').value,
+        ag=+document.getElementById('sAge').value;
+  if(!h||!w||!ag){alert('请完整填写身高、体重、年龄');return;}
+  DB.profile={height:h, weight:w, age:ag,
+    gender:document.getElementById('sGender').value,
+    act:+document.getElementById('sAct').value,
+    aggr:+document.getElementById('sAggr').value};
+  save();
+  const pl=plan();
+  document.getElementById('planBox').style.display='block';
+  document.getElementById('planBox').innerHTML=
+    `<b>你的快速减脂方案</b><br>
+     基础代谢 BMR：<b>${pl.bmr} kcal</b>（按 Mifflin-St Jeor 公式）<br>
+     日常总消耗 TDEE：<b>${pl.tdee} kcal</b><br>
+     每日推荐摄入：<b style="color:var(--primary); font-size:17px;">${pl.goal} kcal</b><br>
+     蛋白质 ${pl.protein}g · 脂肪 ${pl.fatG}g · 碳水 ${pl.carbG}g<br>
+     <span class="muted">按此方案预计每周减 0.5~0.9 kg（因人而异）</span>`;
+  renderHome();
+};
+document.getElementById('saveApiBtn').onclick=()=>{
+  DB.api={base:document.getElementById('sApiBase').value.trim(),
+    model:document.getElementById('sModel').value.trim(),
+    key:document.getElementById('sKey').value.trim()};
+  save(); renderSettings();
+};
+document.getElementById('clearBtn').onclick=()=>{
+  if(confirm('确定清空所有记录和个人信息？此操作不可恢复。')){
+    localStorage.removeItem(KEY); DB=load(); renderSettings(); renderHome();
+  }
+};
+
+/* ================= 启动 ================= */
+renderHome();
+</script>
+</body>
+</html>
