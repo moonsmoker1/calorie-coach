@@ -57,7 +57,7 @@
   .seg span.on{background:#fff; color:var(--primary); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.08);}
   /* 拍照区 */
   .photo-box{border:2px dashed #d6dce6; border-radius:14px; padding:18px; text-align:center;
-    color:var(--muted); font-size:13px; cursor:pointer;}
+    color:var(--muted); font-size:13px; cursor:pointer; display:block;}
   .photo-box img{max-width:100%; border-radius:10px; display:block; margin:0 auto;}
   #aiResult{display:none; margin-top:12px;}
   #aiResult .kcal{font-size:34px; font-weight:800; color:var(--primary);}
@@ -158,11 +158,11 @@
         <span data-v="晚餐">🌙 晚餐</span>
         <span data-v="加餐">🍎 加餐</span>
       </div>
-      <div class="photo-box" id="photoBox">
+      <label class="photo-box" id="photoBox" for="fileInput">
         <div id="photoHint">点击拍照 / 选择图片<br><span style="font-size:11px">🤖 需在「设置」中配置 AI Key</span></div>
         <img id="photoPreview" style="display:none">
-      </div>
-      <input type="file" id="fileInput" accept="image/*" style="display:none">
+      </label>
+      <input type="file" id="fileInput" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">
       <button id="aiBtn" disabled>🤖 AI 识别热量</button>
       <div id="aiErr" class="aiErr" style="display:none"></div>
 
@@ -198,11 +198,11 @@
       <h2>🏃 上传运动记录</h2>
       <div class="tip">把跑步/走路 App（Keep、小米运动、华为运动健康等）的数据填进来，按体重自动计算消耗；也可以截图让 AI 读取。<br>
         💡 <b>日常步数</b>：记录今天走过的总步数（约每 100 步消耗 3~4 kcal）。注意你的日常活动量系数里已包含一部分日常走动，若在「久坐」档位则步数消耗基本全是额外消耗。</div>
-      <div class="photo-box" id="exPhotoBox">
+      <label class="photo-box" id="exPhotoBox" for="exFileInput">
         <div id="exPhotoHint">📷 可选：上传运动 App 截图，AI 自动读取数据</div>
         <img id="exPhotoPreview" style="display:none">
-      </div>
-      <input type="file" id="exFileInput" accept="image/*" style="display:none">
+      </label>
+      <input type="file" id="exFileInput" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">
       <div class="grid3">
         <div><label>类型</label>
           <select id="exType">
@@ -428,7 +428,6 @@ document.querySelectorAll('#mealSeg span').forEach(s=>s.onclick=()=>{
   document.querySelectorAll('#mealSeg span').forEach(x=>x.classList.remove('on'));
   s.classList.add('on'); mealType=s.dataset.v;
 });
-document.getElementById('photoBox').onclick=()=>document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange=e=>handlePhoto(e.target.files[0]);
 document.getElementById('aiBtn').onclick=aiRecognize;
 
@@ -462,18 +461,23 @@ async function callVision(prompt, dataURL){
   const api=DB.api||{};
   const base=(api.base||'https://open.bigmodel.cn/api/paas/v4').replace(/\/+$/,'');
   const model=api.model||'glm-4v-flash';
-  if(!api.key) throw new Error('请先到「设置」填写 AI API Key');
-  const res=await fetch(base+'/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},
-    body:JSON.stringify({
-      model,
-      messages:[{role:'user',content:[
-        {type:'text',text:prompt},
-        {type:'image_url',image_url:{url:dataURL}}
-      ]}]
-    })
-  });
+  if(!api.key) throw new Error('请先到「设置」填写并保存 AI API Key');
+  let res;
+  try{
+    res=await fetch(base+'/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+api.key},
+      body:JSON.stringify({
+        model,
+        messages:[{role:'user',content:[
+          {type:'text',text:prompt},
+          {type:'image_url',image_url:{url:dataURL}}
+        ]}]
+      })
+    });
+  }catch(e){
+    throw new Error('网络连接失败，请检查手机网络后重试（若反复失败，请换系统浏览器打开本页）');
+  }
   if(!res.ok){
     const t=await res.text().catch(()=>'');
     throw new Error('接口返回 '+res.status+'：'+t.slice(0,200));
@@ -535,7 +539,6 @@ document.getElementById('manualBtn').onclick=()=>{
 };
 
 /* ================= 运动 ================= */
-document.getElementById('exPhotoBox').onclick=()=>document.getElementById('exFileInput').click();
 document.getElementById('exFileInput').onchange=e=>{
   const f=e.target.files[0]; if(!f)return;
   compress(f,720,0.75,data=>{
@@ -543,6 +546,7 @@ document.getElementById('exFileInput').onchange=e=>{
     document.getElementById('exPhotoPreview').style.display='block';
     document.getElementById('exPhotoHint').style.display='none';
     const btn=document.createElement('button');
+    btn.id='exAiBtn';
     btn.textContent='🤖 AI 读取截图数据'; btn.className='small';
     btn.onclick=async()=>{
       btn.disabled=true; btn.textContent='识别中…';
@@ -559,8 +563,8 @@ document.getElementById('exFileInput').onchange=e=>{
     };
     btn.style.marginTop='10px';
     const box=document.getElementById('exPhotoBox');
-    const old=box.querySelector('button'); if(old)old.remove();
-    box.appendChild(btn);
+    const old=document.getElementById('exAiBtn'); if(old)old.remove();
+    box.insertAdjacentElement('afterend', btn);
   });
 };
 document.getElementById('saveExBtn').onclick=()=>{
@@ -580,7 +584,7 @@ document.getElementById('saveExBtn').onclick=()=>{
   document.getElementById('exKcal').value='';
   document.getElementById('exPhotoPreview').style.display='none';
   document.getElementById('exPhotoHint').style.display='block';
-  const b=document.querySelector('#exPhotoBox button'); if(b)b.remove();
+  const b=document.getElementById('exAiBtn'); if(b)b.remove();
   go('home'); renderHome();
 };
 
@@ -640,11 +644,18 @@ document.getElementById('saveProfileBtn').onclick=()=>{
   renderHome();
 };
 document.getElementById('saveApiBtn').onclick=()=>{
+  const key=document.getElementById('sKey').value.trim();
+  if(!key){alert('请先粘贴 API Key 再保存');return;}
   DB.api={base:document.getElementById('sApiBase').value.trim(),
     model:document.getElementById('sModel').value.trim(),
-    key:document.getElementById('sKey').value.trim()};
-  save(); renderSettings();
+    key};
+  save(); renderSettings(); updatePhotoHint();
 };
+function updatePhotoHint(){
+  const has=DB.api&&DB.api.key;
+  document.getElementById('photoHint').innerHTML='点击拍照 / 选择图片<br><span style="font-size:11px">'
+    +(has?'🤖 AI 已就绪，选完照片点「AI 识别热量」':'🤖 需在「设置」中配置 AI Key')+'</span>';
+}
 document.getElementById('clearBtn').onclick=()=>{
   if(confirm('确定清空所有记录和个人信息？此操作不可恢复。')){
     localStorage.removeItem(KEY); DB=load(); renderSettings(); renderHome();
@@ -653,6 +664,7 @@ document.getElementById('clearBtn').onclick=()=>{
 
 /* ================= 启动 ================= */
 renderHome();
+updatePhotoHint();
 </script>
 </body>
 </html>
